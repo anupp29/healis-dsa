@@ -53,7 +53,7 @@ A comprehensive Data Structures and Algorithms (DSA) integration system for the 
 
 1. **Start the Streamlit application**
    ```bash
-   streamlit run app.py
+   conda de
    ```
 
 2. **Access the dashboard**
