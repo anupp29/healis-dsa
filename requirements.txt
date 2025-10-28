@@ -9,3 +9,7 @@ python-dotenv==1.0.0
 watchdog==3.0.0
 dash==2.14.2
 dash-bootstrap-components==1.5.0
+asyncio
+threading
+dataclasses
+enum34
