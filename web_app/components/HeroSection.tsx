@@ -8,9 +8,9 @@ export default function HeroSection() {
     <section className="relative pt-24 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-200/30 to-purple-200/30 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-pink-200/20 to-orange-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-green-200/20 to-blue-200/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-blue-200/30 to-purple-200/30 rounded-full blur-3xl animate-bounce"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-pink-200/20 to-orange-200/20 rounded-full blur-3xl animate-bounce" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-green-200/20 to-blue-200/20 rounded-full blur-3xl animate-bounce" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="max-w-7xl mx-auto">
@@ -28,7 +28,7 @@ export default function HeroSection() {
                 <span className="text-sm font-medium text-blue-700">Professional DSA Visualization</span>
               </div>
               
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-text-primary mb-6 leading-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-bold text-gray-800 mb-6 leading-tight">
                 Where{' '}
                 <span className="text-gradient">Basic DSA</span>
                 <br />
@@ -38,7 +38,7 @@ export default function HeroSection() {
                 Excellence
               </h1>
               
-              <p className="text-lg text-text-secondary max-w-2xl mx-auto lg:mx-0 mb-8">
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto lg:mx-0 mb-8">
                 Experience the beauty of fundamental data structures and algorithms through 
                 professional healthcare visualizations. Watch heaps, queues, stacks, and graphs 
                 solve real medical challenges with stunning clarity.
