@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, Activity, Users, Calendar, Brain, Stethoscope } from 'lucide-react'
-import Navigation from '@/components/Navigation'
-import HeroSection from '@/components/HeroSection'
-import DSAShowcase from '@/components/DSAShowcase'
-import LiveMetrics from '@/components/LiveMetrics'
 
+import Navigation from '../components/Navigation'
+import HeroSection from '../components/HeroSection'
+import DSAShowcase from '../components/DSAShowcase'
+import LiveMetrics from '../components/LiveMetrics'
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false)
 
