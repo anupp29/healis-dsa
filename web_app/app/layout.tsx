@@ -1,15 +1,22 @@
-import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Poppins } from 'next/font/google'
+import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+})
+
+const poppins = Poppins({ 
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-poppins',
+})
 
 export const metadata: Metadata = {
-  title: 'HEAL Platform - Next-Generation DSA Visualization',
-  description: 'Interactive Data Structures and Algorithms visualization platform with real-time MongoDB integration',
-  keywords: ['DSA', 'algorithms', 'data structures', 'visualization', 'MongoDB', 'healthcare'],
-  authors: [{ name: 'HEAL Platform Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+  title: 'HEAL Platform - Professional DSA Visualization',
+  description: 'Where Basic DSA Meets Healthcare Excellence - Beautiful visualizations of algorithms in action',
+  keywords: ['DSA', 'Healthcare', 'Algorithms', 'Visualization', 'Professional'],
 }
 
 export default function RootLayout({
@@ -18,10 +25,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <div className="particles" id="particles-js"></div>
-        {children}
+    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
+      <body className={`${inter.className} bg-gradient-to-br from-pastel-whisper via-pastel-pearl to-pastel-sky min-h-screen`}>
+        <div className="min-h-screen bg-gradient-to-br from-pastel-whisper/50 via-pastel-pearl/30 to-pastel-sky/50">
+          {children}
+        </div>
       </body>
     </html>
   )
