@@ -66,8 +66,40 @@ export default function BinarySearchTreeVisualizer({ isPlaying, speed = 1, sound
     value,
     left: null,
     right: null,
-    id: `node-${value}-${Date.now()}`
+    id: `node-${value}-${Date.now()}`,
+    isHighlighted: false,
+    isComparing: false,
+    isFound: false
   })
+
+  // Perfect BST utility functions
+  const calculateHeight = (node: TreeNode | null): number => {
+    if (!node) return 0
+    return 1 + Math.max(calculateHeight(node.left), calculateHeight(node.right))
+  }
+
+  const countNodes = (node: TreeNode | null): number => {
+    if (!node) return 0
+    return 1 + countNodes(node.left) + countNodes(node.right)
+  }
+
+  const isValidBST = (node: TreeNode | null, min: number = -Infinity, max: number = Infinity): boolean => {
+    if (!node) return true
+    if (node.value <= min || node.value >= max) return false
+    return isValidBST(node.left, min, node.value) && isValidBST(node.right, node.value, max)
+  }
+
+  const findMin = (node: TreeNode | null): TreeNode | null => {
+    if (!node) return null
+    while (node.left) node = node.left
+    return node
+  }
+
+  const findMax = (node: TreeNode | null): TreeNode | null => {
+    if (!node) return null
+    while (node.right) node = node.right
+    return node
+  }
 
   const insertNode = useCallback(async (value: number, animated: boolean = true) => {
     if (isAnimating) return
@@ -81,20 +113,29 @@ export default function BinarySearchTreeVisualizer({ isPlaying, speed = 1, sound
     setCurrentStep(0)
 
     const insertRecursive = async (node: TreeNode | null, parent: TreeNode | null = null, isLeft: boolean = true): Promise<TreeNode> => {
+      // Base case: found insertion point
       if (!node) {
         const newNode = createNode(value)
         setPerformanceMetrics(prev => ({ 
           ...prev, 
           operations: prev.operations + 1,
-          nodes: prev.nodes + 1
+          nodes: prev.nodes + 1,
+          height: Math.max(prev.height, calculateHeight(root) + 1)
         }))
         return newNode
+      }
+
+      // Handle duplicate values
+      if (node.value === value) {
+        setCurrentOperation(`Value ${value} already exists in tree`)
+        return node
       }
 
       if (animated) {
         node.isComparing = true
         setRoot(prevRoot => ({ ...prevRoot! }))
-        await new Promise(resolve => setTimeout(resolve, 800))
+        setCurrentOperation(`Comparing ${value} with ${node.value}`)
+        await new Promise(resolve => setTimeout(resolve, 800 / speed))
       }
 
       setPerformanceMetrics(prev => ({ ...prev, comparisons: prev.comparisons + 1 }))
@@ -210,10 +251,6 @@ export default function BinarySearchTreeVisualizer({ isPlaying, speed = 1, sound
     }, 2000)
   }, [root, isAnimating])
 
-  const findMin = (node: TreeNode): TreeNode => {
-    while (node.left) node = node.left
-    return node
-  }
 
   const getRandomNodeValue = (node: TreeNode | null): number | null => {
     if (!node) return null

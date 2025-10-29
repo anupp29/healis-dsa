@@ -29,7 +29,7 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
   const [isAnimating, setIsAnimating] = useState(false)
   const [currentOperation, setCurrentOperation] = useState('')
   const [startCell, setStartCell] = useState<{row: number, col: number}>({row: 5, col: 5})
-  const [endCell, setEndCell] = useState<{row: number, col: number}>({row: 15, col: 25})
+  const [endCell, setEndCell] = useState<{row: number, col: number}>({row: 10, col: 15})
   const [isDrawing, setIsDrawing] = useState(false)
   const [metrics, setMetrics] = useState({
     visitedNodes: 0,
@@ -38,8 +38,8 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
     nodesInQueue: 0
   })
 
-  const ROWS = 20
-  const COLS = 30
+  const ROWS = 15
+  const COLS = 20
 
   useEffect(() => {
     initializeGrid()
@@ -102,42 +102,68 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
 
   const dijkstra = async () => {
     const startTime = Date.now()
-    const newGrid = [...grid]
+    const newGrid = grid.map(row => row.map(cell => ({
+      ...cell,
+      distance: cell.isStart ? 0 : Infinity,
+      isVisited: false,
+      isPath: false,
+      previousCell: null
+    })))
+    
     const unvisitedNodes = getAllNodes(newGrid)
     const startNode = newGrid[startCell.row][startCell.col]
-    startNode.distance = 0
+    
+    setCurrentOperation('Starting Dijkstra\'s Algorithm...')
+    setGrid([...newGrid])
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     while (unvisitedNodes.length) {
+      // Sort by distance to get the closest unvisited node
       sortNodesByDistance(unvisitedNodes)
-      const closestNode = unvisitedNodes.shift()!
+      const currentNode = unvisitedNodes.shift()!
       
-      if (closestNode.isWall) continue
-      if (closestNode.distance === Infinity) break
+      // Skip walls
+      if (currentNode.isWall) continue
+      
+      // If we can't reach any more nodes, stop
+      if (currentNode.distance === Infinity) {
+        setCurrentOperation('No path exists to remaining nodes')
+        break
+      }
 
-      closestNode.isVisited = true
+      // Mark as visited
+      currentNode.isVisited = true
+      
+      // Visual feedback
       setGrid([...newGrid])
-      setCurrentOperation(`Visiting node (${closestNode.row}, ${closestNode.col})`)
+      setCurrentOperation(`Exploring node (${currentNode.row}, ${currentNode.col}) - Distance: ${currentNode.distance}`)
       setMetrics(prev => ({ 
         ...prev, 
         visitedNodes: prev.visitedNodes + 1,
         nodesInQueue: unvisitedNodes.length
       }))
 
-      await new Promise(resolve => setTimeout(resolve, 50))
+      // Slower animation for better visualization
+      await new Promise(resolve => setTimeout(resolve, 100 / speed))
 
-      if (closestNode.row === endCell.row && closestNode.col === endCell.col) {
-        const path = getShortestPath(closestNode)
-        animatePath(path)
+      // Found the target!
+      if (currentNode.row === endCell.row && currentNode.col === endCell.col) {
+        const path = getShortestPath(currentNode)
+        await animatePath(path)
         setMetrics(prev => ({ 
           ...prev, 
           pathLength: path.length,
           executionTime: Date.now() - startTime
         }))
+        setCurrentOperation(`Path found! Total distance: ${currentNode.distance}`)
         return
       }
 
-      updateUnvisitedNeighbors(closestNode, newGrid)
+      // Update distances to neighbors
+      await updateUnvisitedNeighbors(currentNode, newGrid)
     }
+    
+    setCurrentOperation('Algorithm completed - No path found')
   }
 
   const aStar = async () => {
@@ -218,11 +244,23 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
     unvisitedNodes.sort((nodeA, nodeB) => nodeA.distance - nodeB.distance)
   }
 
-  const updateUnvisitedNeighbors = (node: Cell, grid: Cell[][]) => {
+  const updateUnvisitedNeighbors = async (node: Cell, grid: Cell[][]) => {
     const neighbors = getNeighbors(node, grid)
+    
     for (const neighbor of neighbors) {
-      neighbor.distance = node.distance + 1
-      neighbor.previousCell = node
+      // Calculate new distance (assuming each step costs 1)
+      const newDistance = node.distance + 1
+      
+      // Only update if we found a shorter path
+      if (newDistance < neighbor.distance) {
+        neighbor.distance = newDistance
+        neighbor.previousCell = node
+        
+        // Visual feedback for distance update
+        setCurrentOperation(`Updated distance to (${neighbor.row}, ${neighbor.col}): ${newDistance}`)
+        setGrid([...grid])
+        await new Promise(resolve => setTimeout(resolve, 50 / speed))
+      }
     }
   }
 
@@ -290,12 +328,20 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
   }
 
   const getCellClassName = (cell: Cell): string => {
-    if (cell.isStart) return 'bg-green-500 border-green-600'
-    if (cell.isEnd) return 'bg-red-500 border-red-600'
-    if (cell.isPath) return 'bg-yellow-400 border-yellow-500'
-    if (cell.isVisited) return 'bg-blue-200 border-blue-300'
+    if (cell.isStart) return 'bg-green-500 border-green-600 text-white font-bold'
+    if (cell.isEnd) return 'bg-red-500 border-red-600 text-white font-bold'
+    if (cell.isPath) return 'bg-yellow-400 border-yellow-500 text-black font-bold'
+    if (cell.isVisited) return 'bg-blue-200 border-blue-300 text-blue-800 font-semibold'
     if (cell.isWall) return 'bg-gray-800 border-gray-900'
-    return 'bg-white border-gray-300 hover:bg-gray-100'
+    return 'bg-white border-gray-300 hover:bg-gray-100 text-gray-600'
+  }
+
+  const getCellContent = (cell: Cell): string => {
+    if (cell.isStart) return 'S'
+    if (cell.isEnd) return 'E'
+    if (cell.isWall) return ''
+    if (cell.distance === Infinity) return ''
+    return cell.distance.toString()
   }
 
   return (
@@ -366,18 +412,30 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
 
         <div className="bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
           <h4 className="font-semibold text-gray-800 mb-3">Legend</h4>
-          <div className="space-y-1 text-xs">
+          <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded"></div>
-              <span>Start</span>
+              <div className="w-4 h-4 bg-green-500 rounded text-white text-xs flex items-center justify-center font-bold">S</div>
+              <span>Start (Distance: 0)</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded"></div>
-              <span>End</span>
+              <div className="w-4 h-4 bg-red-500 rounded text-white text-xs flex items-center justify-center font-bold">E</div>
+              <span>End (Target)</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-gray-800 rounded"></div>
-              <span>Wall</span>
+              <div className="w-4 h-4 bg-gray-800 rounded"></div>
+              <span>Wall (Blocked)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-blue-200 border border-blue-300 text-blue-800 text-xs flex items-center justify-center font-semibold">3</div>
+              <span>Visited (Distance shown)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-yellow-400 border border-yellow-500 text-black text-xs flex items-center justify-center font-bold">2</div>
+              <span>Shortest Path</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-white border border-gray-300 text-gray-600 text-xs flex items-center justify-center">∞</div>
+              <span>Unvisited</span>
             </div>
           </div>
         </div>
@@ -404,15 +462,45 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
         ))}
       </div>
 
+      {/* Distance Analysis */}
+      <div className="bg-white/90 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
+        <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+          <Navigation className="w-5 h-5 mr-2" />
+          Distance Analysis
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="bg-green-100 p-3 rounded-lg">
+            <div className="font-semibold text-green-800">Start Node</div>
+            <div className="text-green-600">({startCell.row}, {startCell.col}) - Distance: 0</div>
+          </div>
+          <div className="bg-red-100 p-3 rounded-lg">
+            <div className="font-semibold text-red-800">End Node</div>
+            <div className="text-red-600">({endCell.row}, {endCell.col}) - Distance: {
+              grid[endCell.row] && grid[endCell.row][endCell.col] 
+                ? (grid[endCell.row][endCell.col].distance === Infinity ? '∞' : grid[endCell.row][endCell.col].distance)
+                : '∞'
+            }</div>
+          </div>
+          <div className="bg-blue-100 p-3 rounded-lg">
+            <div className="font-semibold text-blue-800">Visited Nodes</div>
+            <div className="text-blue-600">{metrics.visitedNodes} nodes explored</div>
+          </div>
+          <div className="bg-purple-100 p-3 rounded-lg">
+            <div className="font-semibold text-purple-800">Algorithm</div>
+            <div className="text-purple-600">{algorithm.charAt(0).toUpperCase() + algorithm.slice(1)}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Grid Visualization */}
       <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-6 rounded-2xl border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-lg font-semibold text-gray-800 flex items-center">
             <Navigation className="w-5 h-5 mr-2" />
-            {algorithm.charAt(0).toUpperCase() + algorithm.slice(1)} Pathfinding
+            {algorithm.charAt(0).toUpperCase() + algorithm.slice(1)} Pathfinding Grid
           </h4>
           <div className="text-sm text-gray-600">
-            Click cells to toggle walls
+            Numbers show distance from start • Click cells to toggle walls
           </div>
         </div>
         
@@ -423,14 +511,17 @@ export default function PathfindingVisualizer({ isPlaying, speed = 1, soundEnabl
             row.map((cell, colIndex) => (
               <motion.div
                 key={cell.id}
-                className={`w-4 h-4 border cursor-pointer transition-all duration-200 ${getCellClassName(cell)}`}
+                className={`w-8 h-8 border cursor-pointer transition-all duration-200 flex items-center justify-center text-xs ${getCellClassName(cell)}`}
                 onClick={() => handleCellClick(rowIndex, colIndex)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: (rowIndex * COLS + colIndex) * 0.001 }}
-              />
+                title={`Position: (${rowIndex}, ${colIndex}), Distance: ${cell.distance === Infinity ? '∞' : cell.distance}`}
+              >
+                {getCellContent(cell)}
+              </motion.div>
             ))
           )}
         </div>

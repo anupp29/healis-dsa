@@ -29,6 +29,7 @@ export interface ErrorContext {
   method?: string
   timestamp: Date
   stackTrace?: string
+  promise?: string
   additionalData?: Record<string, any>
 }
 
@@ -177,7 +178,7 @@ class ErrorHandler {
         resolved: false
       })
 
-      return similar as SystemError | null
+      return similar as unknown as SystemError | null
     } catch (error) {
       console.error('Failed to find similar error:', error)
       return null
@@ -194,7 +195,7 @@ class ErrorHandler {
         {
           $inc: { occurrenceCount: 1 },
           $set: { lastOccurrence: newError.context.timestamp },
-          $push: { contexts: newError.context }
+          $push: { contexts: newError.context } as any
         }
       )
     } catch (error) {
@@ -441,7 +442,7 @@ class ErrorHandler {
       return await collection.find({ resolved: false })
         .sort({ lastOccurrence: -1 })
         .limit(100)
-        .toArray() as SystemError[]
+        .toArray() as unknown as SystemError[]
     } catch (error) {
       console.error('Failed to get unresolved errors:', error)
       return []
@@ -526,11 +527,11 @@ export class ErrorUtils {
     }
   }
 
-  public static validateInput(
+  public static async validateInput(
     input: any,
     schema: any,
     context: Partial<ErrorContext> = {}
-  ): { valid: boolean; errors?: string[]; errorId?: string } {
+  ): Promise<{ valid: boolean; errors?: string[]; errorId?: string }> {
     try {
       // This would integrate with a validation library like Joi or Yup
       // For now, basic validation
@@ -540,8 +541,8 @@ export class ErrorUtils {
       
       return { valid: true }
     } catch (error) {
-      const errorId = this.errorHandler.reportValidationError(error as Error, context)
-      return { valid: false, errors: [error.message], errorId }
+      const errorId = await this.errorHandler.reportValidationError(error as Error, context)
+      return { valid: false, errors: [(error as Error).message], errorId }
     }
   }
 }

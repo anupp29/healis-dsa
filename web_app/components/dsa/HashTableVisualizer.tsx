@@ -26,6 +26,16 @@ export default function HashTableVisualizer({ isPlaying, speed = 1, soundEnabled
   const [currentOperation, setCurrentOperation] = useState('')
   const [isAnimating, setIsAnimating] = useState(false)
   const [showCode, setShowCode] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newPatientForm, setNewPatientForm] = useState({
+    patientId: '',
+    name: '',
+    department: '',
+    doctor: '',
+    city: '',
+    phone: ''
+  })
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
   const [metrics, setMetrics] = useState({
     totalEntries: 0,
     collisions: 0,
@@ -41,6 +51,64 @@ export default function HashTableVisualizer({ isPlaying, speed = 1, soundEnabled
     { key: 'P004', value: 'Sunita Devi - Pediatrics' },
     { key: 'P005', value: 'Vikram Singh - Dermatology' }
   ]
+
+  // Validation functions
+  const validatePatientForm = () => {
+    const errors: {[key: string]: string} = {}
+    
+    if (!newPatientForm.patientId.trim()) {
+      errors.patientId = 'Patient ID is required'
+    } else if (!/^P\d{3,}$/.test(newPatientForm.patientId.trim())) {
+      errors.patientId = 'Patient ID must be in format P001, P002, etc.'
+    }
+    
+    if (!newPatientForm.name.trim()) {
+      errors.name = 'Patient name is required'
+    } else if (newPatientForm.name.length < 2) {
+      errors.name = 'Name must be at least 2 characters'
+    }
+    
+    if (!newPatientForm.department.trim()) {
+      errors.department = 'Department is required'
+    }
+    
+    if (!newPatientForm.doctor.trim()) {
+      errors.doctor = 'Doctor name is required'
+    }
+    
+    if (!newPatientForm.city.trim()) {
+      errors.city = 'City is required'
+    }
+    
+    if (newPatientForm.phone && !/^\d{10}$/.test(newPatientForm.phone.replace(/\D/g, ''))) {
+      errors.phone = 'Please enter a valid 10-digit phone number'
+    }
+    
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const resetForm = () => {
+    setNewPatientForm({
+      patientId: '',
+      name: '',
+      department: '',
+      doctor: '',
+      city: '',
+      phone: ''
+    })
+    setValidationErrors({})
+    setShowAddForm(false)
+  }
+
+  const addCustomPatient = () => {
+    if (!validatePatientForm()) return
+
+    const patientRecord = `${newPatientForm.name} - ${newPatientForm.department} (Dr. ${newPatientForm.doctor}) - ${newPatientForm.city}${newPatientForm.phone ? ` - ${newPatientForm.phone}` : ''}`
+    
+    insert(newPatientForm.patientId.trim(), patientRecord, true)
+    resetForm()
+  }
 
   useEffect(() => {
     // Initialize with sample data
@@ -235,7 +303,7 @@ export default function HashTableVisualizer({ isPlaying, speed = 1, soundEnabled
         <div className="bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-gray-200">
           <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
             <Plus className="w-4 h-4 mr-2" />
-            Insert Entry
+            Quick Insert
           </h4>
           <div className="space-y-2">
             <input
@@ -257,7 +325,13 @@ export default function HashTableVisualizer({ isPlaying, speed = 1, soundEnabled
               disabled={isAnimating || !inputKey || !inputValue}
               className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50"
             >
-              Insert
+              Quick Insert
+            </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+            >
+              Add New Patient
             </button>
           </div>
         </div>
@@ -303,6 +377,157 @@ export default function HashTableVisualizer({ isPlaying, speed = 1, soundEnabled
           </div>
         </div>
       </div>
+
+      {/* Add New Patient Form */}
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white/90 backdrop-blur-sm p-6 rounded-xl border border-gray-200 shadow-large"
+          >
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Plus className="w-5 h-5 mr-2" />
+              Add New Patient Record
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Patient ID *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.patientId}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, patientId: e.target.value }))}
+                  placeholder="P001, P002, etc."
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.patientId ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.patientId && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.patientId}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Patient Name *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.name}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter patient's full name"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.name ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.name && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Department *
+                </label>
+                <select
+                  value={newPatientForm.department}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, department: e.target.value }))}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.department ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select Department</option>
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Neurology">Neurology</option>
+                  <option value="Orthopedics">Orthopedics</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Dermatology">Dermatology</option>
+                  <option value="Emergency">Emergency</option>
+                  <option value="General Medicine">General Medicine</option>
+                  <option value="Gynecology">Gynecology</option>
+                  <option value="ENT">ENT</option>
+                </select>
+                {validationErrors.department && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.department}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Doctor Name *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.doctor}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, doctor: e.target.value }))}
+                  placeholder="Dr. Smith"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.doctor ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.doctor && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.doctor}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.city}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="Patient's city"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.city ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.city && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.city}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number (Optional)
+                </label>
+                <input
+                  type="tel"
+                  value={newPatientForm.phone}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="10-digit phone number"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.phone ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.phone && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={resetForm}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addCustomPatient}
+                className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                Add Patient Record
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Metrics */}
       <div className="grid grid-cols-4 gap-4">

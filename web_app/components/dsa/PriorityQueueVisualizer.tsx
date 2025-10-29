@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, AlertTriangle, Clock, User, Plus, Minus } from 'lucide-react'
+import { Heart, AlertTriangle, Clock, User, Plus, Minus, UserPlus } from 'lucide-react'
 
 interface Patient {
   id: number
@@ -25,6 +25,16 @@ export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEna
   const [heap, setHeap] = useState<Patient[]>([])
   const [currentOperation, setCurrentOperation] = useState<string>('')
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1)
+  const [newPatientForm, setNewPatientForm] = useState({
+    name: '',
+    condition: '',
+    priority: 5,
+    severity: 'moderate' as 'critical' | 'urgent' | 'moderate' | 'stable',
+    age: '',
+    city: ''
+  })
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
 
   // Sample Indian patient data
   const samplePatients: Patient[] = [
@@ -41,10 +51,165 @@ export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEna
   const [patientQueue, setPatientQueue] = useState<Patient[]>([...samplePatients])
   const [processedPatients, setProcessedPatients] = useState<Patient[]>([])
 
+  // Validation functions
+  const validatePatientForm = () => {
+    const errors: {[key: string]: string} = {}
+    
+    if (!newPatientForm.name.trim()) {
+      errors.name = 'Patient name is required'
+    } else if (newPatientForm.name.length < 2) {
+      errors.name = 'Name must be at least 2 characters'
+    }
+    
+    if (!newPatientForm.condition.trim()) {
+      errors.condition = 'Medical condition is required'
+    }
+    
+    if (!newPatientForm.age || parseInt(newPatientForm.age) < 1 || parseInt(newPatientForm.age) > 120) {
+      errors.age = 'Please enter a valid age (1-120)'
+    }
+    
+    if (!newPatientForm.city.trim()) {
+      errors.city = 'City is required'
+    }
+    
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const resetForm = () => {
+    setNewPatientForm({
+      name: '',
+      condition: '',
+      priority: 5,
+      severity: 'moderate',
+      age: '',
+      city: ''
+    })
+    setValidationErrors({})
+    setShowAddForm(false)
+  }
+
+  const addCustomPatient = () => {
+    if (!validatePatientForm()) return
+
+    const newPatient: Patient = {
+      id: Date.now(),
+      name: newPatientForm.name.trim(),
+      condition: newPatientForm.condition.trim(),
+      priority: newPatientForm.priority,
+      severity: newPatientForm.severity,
+      waitTime: "0 min",
+      age: parseInt(newPatientForm.age),
+      city: newPatientForm.city.trim()
+    }
+
+    // Use perfect heap insertion
+    const newHeap = insertPatient(newPatient, heap)
+    setHeap(newHeap)
+    
+    // Validate heap property
+    if (!isValidHeap(newHeap)) {
+      console.error('Heap property violated after custom patient insertion!')
+    }
+    
+    setCurrentOperation(`Added ${newPatient.name} to emergency queue`)
+    setTimeout(() => setCurrentOperation(''), 2000)
+    
+    resetForm()
+  }
+
+  // Perfect Min-Heap Implementation with all edge cases
+  const heapifyUp = (heap: Patient[], index: number) => {
+    if (index === 0) return heap // Root reached
+    
+    const parentIndex = Math.floor((index - 1) / 2)
+    
+    // Min-heap: parent should have higher priority (lower number = higher priority)
+    if (heap[parentIndex].priority > heap[index].priority) {
+      // Swap with parent
+      [heap[parentIndex], heap[index]] = [heap[index], heap[parentIndex]]
+      return heapifyUp(heap, parentIndex)
+    }
+    
+    return heap
+  }
+
+  const heapifyDown = (heap: Patient[], index: number) => {
+    const leftChild = 2 * index + 1
+    const rightChild = 2 * index + 2
+    let smallest = index
+
+    // Find the smallest among parent and children
+    if (leftChild < heap.length && heap[leftChild].priority < heap[smallest].priority) {
+      smallest = leftChild
+    }
+    
+    if (rightChild < heap.length && heap[rightChild].priority < heap[smallest].priority) {
+      smallest = rightChild
+    }
+
+    // If smallest is not the parent, swap and continue heapifying
+    if (smallest !== index) {
+      [heap[index], heap[smallest]] = [heap[smallest], heap[index]]
+      return heapifyDown(heap, smallest)
+    }
+    
+    return heap
+  }
+
+  const buildHeap = (patients: Patient[]) => {
+    const heap = [...patients]
+    // Start from last non-leaf node and heapify down
+    for (let i = Math.floor(heap.length / 2) - 1; i >= 0; i--) {
+      heapifyDown(heap, i)
+    }
+    return heap
+  }
+
+  const insertPatient = (patient: Patient, heap: Patient[]) => {
+    const newHeap = [...heap, patient]
+    return heapifyUp(newHeap, newHeap.length - 1)
+  }
+
+  const extractMin = (heap: Patient[]) => {
+    if (heap.length === 0) return { newHeap: [], extractedPatient: null }
+    if (heap.length === 1) return { newHeap: [], extractedPatient: heap[0] }
+
+    const extractedPatient = heap[0]
+    const newHeap = [...heap]
+    
+    // Move last element to root
+    newHeap[0] = newHeap[newHeap.length - 1]
+    newHeap.pop()
+    
+    // Heapify down from root
+    heapifyDown(newHeap, 0)
+    
+    return { newHeap, extractedPatient }
+  }
+
+  const isValidHeap = (heap: Patient[]) => {
+    for (let i = 0; i < heap.length; i++) {
+      const leftChild = 2 * i + 1
+      const rightChild = 2 * i + 2
+      
+      if (leftChild < heap.length && heap[i].priority > heap[leftChild].priority) {
+        return false
+      }
+      if (rightChild < heap.length && heap[i].priority > heap[rightChild].priority) {
+        return false
+      }
+    }
+    return true
+  }
+
   // Initialize with some patients
   useEffect(() => {
     const initialPatients = samplePatients.slice(0, 4)
-    setHeap(initialPatients.sort((a, b) => b.priority - a.priority))
+    const builtHeap = buildHeap(initialPatients)
+    setHeap(builtHeap)
+    setPatientQueue(samplePatients.slice(4))
   }, [])
 
   // Auto-play functionality
@@ -69,10 +234,14 @@ export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEna
     setPatientQueue(prev => prev.slice(1))
     setCurrentOperation(`Adding ${newPatient.name} (Priority: ${newPatient.priority})`)
     
-    // Add to heap and maintain heap property
-    const newHeap = [...heap, newPatient]
-    heapifyUp(newHeap, newHeap.length - 1)
+    // Use perfect heap insertion
+    const newHeap = insertPatient(newPatient, heap)
     setHeap(newHeap)
+    
+    // Validate heap property
+    if (!isValidHeap(newHeap)) {
+      console.error('Heap property violated after insertion!')
+    }
     
     setTimeout(() => setCurrentOperation(''), 2000)
   }
@@ -80,51 +249,22 @@ export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEna
   const removePatient = () => {
     if (heap.length === 0) return
 
-    const removedPatient = heap[0]
-    setCurrentOperation(`Processing ${removedPatient.name} (Highest Priority)`)
-    setProcessedPatients(prev => [...prev, removedPatient])
+    const { newHeap, extractedPatient } = extractMin(heap)
     
-    // Remove root and maintain heap property
-    const newHeap = [...heap]
-    newHeap[0] = newHeap[newHeap.length - 1]
-    newHeap.pop()
-    
-    if (newHeap.length > 0) {
-      heapifyDown(newHeap, 0)
+    if (extractedPatient) {
+      setCurrentOperation(`Processing ${extractedPatient.name} (Highest Priority)`)
+      setProcessedPatients(prev => [...prev, extractedPatient])
+      setHeap(newHeap)
+      
+      // Validate heap property
+      if (newHeap.length > 0 && !isValidHeap(newHeap)) {
+        console.error('Heap property violated after extraction!')
+      }
     }
     
-    setHeap(newHeap)
     setTimeout(() => setCurrentOperation(''), 2000)
   }
 
-  const heapifyUp = (arr: Patient[], index: number) => {
-    if (index === 0) return
-
-    const parentIndex = Math.floor((index - 1) / 2)
-    if (arr[index].priority > arr[parentIndex].priority) {
-      [arr[index], arr[parentIndex]] = [arr[parentIndex], arr[index]]
-      heapifyUp(arr, parentIndex)
-    }
-  }
-
-  const heapifyDown = (arr: Patient[], index: number) => {
-    const leftChild = 2 * index + 1
-    const rightChild = 2 * index + 2
-    let largest = index
-
-    if (leftChild < arr.length && arr[leftChild].priority > arr[largest].priority) {
-      largest = leftChild
-    }
-
-    if (rightChild < arr.length && arr[rightChild].priority > arr[largest].priority) {
-      largest = rightChild
-    }
-
-    if (largest !== index) {
-      [arr[index], arr[largest]] = [arr[largest], arr[index]]
-      heapifyDown(arr, largest)
-    }
-  }
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -172,7 +312,15 @@ export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEna
           className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-medium hover:shadow-large transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Patient</span>
+          <span>Add from Queue</span>
+        </button>
+        
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-medium hover:shadow-large transition-all duration-300"
+        >
+          <User className="w-4 h-4" />
+          <span>Add New Patient</span>
         </button>
         
         <button
@@ -184,6 +332,154 @@ export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEna
           <span>Process Patient</span>
         </button>
       </div>
+
+      {/* Add New Patient Form */}
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white/90 backdrop-blur-sm p-6 rounded-xl border border-border-light shadow-large"
+          >
+            <h4 className="text-lg font-semibold text-text-primary mb-4 flex items-center">
+              <User className="w-5 h-5 mr-2" />
+              Add New Patient to Emergency Queue
+            </h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Patient Name *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.name}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter patient's full name"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.name ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.name && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Medical Condition *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.condition}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, condition: e.target.value }))}
+                  placeholder="e.g., Chest Pain, Fever, Injury"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.condition ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.condition && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.condition}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Age *
+                </label>
+                <input
+                  type="number"
+                  value={newPatientForm.age}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, age: e.target.value }))}
+                  placeholder="Patient's age"
+                  min="1"
+                  max="120"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.age ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.age && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.age}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.city}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="Patient's city"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                    validationErrors.city ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  }`}
+                />
+                {validationErrors.city && (
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.city}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Severity Level
+                </label>
+                <select
+                  value={newPatientForm.severity}
+                  onChange={(e) => {
+                    const severity = e.target.value as 'critical' | 'urgent' | 'moderate' | 'stable'
+                    const priority = severity === 'critical' ? 9 : 
+                                   severity === 'urgent' ? 7 : 
+                                   severity === 'moderate' ? 5 : 3
+                    setNewPatientForm(prev => ({ ...prev, severity, priority }))
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="critical">Critical (Priority 9)</option>
+                  <option value="urgent">Urgent (Priority 7)</option>
+                  <option value="moderate">Moderate (Priority 5)</option>
+                  <option value="stable">Stable (Priority 3)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">
+                  Priority Score: {newPatientForm.priority}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={newPatientForm.priority}
+                  onChange={(e) => setNewPatientForm(prev => ({ ...prev, priority: parseInt(e.target.value) }))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-text-secondary mt-1">
+                  <span>Low (1)</span>
+                  <span>High (10)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={resetForm}
+                className="px-4 py-2 text-text-secondary border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addCustomPatient}
+                className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-medium hover:shadow-large transition-all duration-300"
+              >
+                Add Patient to Queue
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Heap Visualization */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
