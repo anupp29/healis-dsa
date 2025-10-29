@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Menu, X, Heart, Activity, Users, BarChart3, Settings } from 'lucide-react'
+import { Menu, X, Heart, Activity, Users, BarChart3, Settings, Brain } from 'lucide-react'
 import Link from 'next/link'
 
 export default function Navigation() {
@@ -106,6 +106,7 @@ export default function Navigation() {
 
 const navItems = [
   { name: 'Dashboard', href: '/', icon: BarChart3 },
+  { name: 'Master DSA', href: '/master-dsa', icon: Brain },
   { name: 'Priority Queue', href: '/priority-queue', icon: Heart },
   { name: 'Queue Flow', href: '/queue-flow', icon: Activity },
   { name: 'Stack Records', href: '/stack-records', icon: Users },

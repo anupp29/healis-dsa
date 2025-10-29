@@ -1,66 +1,130 @@
 import { MongoClient, Db } from 'mongodb'
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
+// HEALIS Database Configuration
+if (!process.env.MONGODB_URI_HEALIS || !process.env.MONGODB_URI_ADMIN) {
+  throw new Error('Invalid/Missing environment variables: "MONGODB_URI_HEALIS" or "MONGODB_URI_ADMIN"')
 }
 
-const uri = process.env.MONGODB_URI
+const healIsUri = process.env.MONGODB_URI_HEALIS
+const adminUri = process.env.MONGODB_URI_ADMIN
 const options = {}
 
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
+let healIsClient: MongoClient
+let adminClient: MongoClient
+let healIsClientPromise: Promise<MongoClient>
+let adminClientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
+  // In development mode, use global variables for HMR
   let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
+    _healIsClientPromise?: Promise<MongoClient>
+    _adminClientPromise?: Promise<MongoClient>
   }
 
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = client.connect()
+  if (!globalWithMongo._healIsClientPromise) {
+    healIsClient = new MongoClient(healIsUri, options)
+    globalWithMongo._healIsClientPromise = healIsClient.connect()
   }
-  clientPromise = globalWithMongo._mongoClientPromise
+  healIsClientPromise = globalWithMongo._healIsClientPromise
+
+  if (!globalWithMongo._adminClientPromise) {
+    adminClient = new MongoClient(adminUri, options)
+    globalWithMongo._adminClientPromise = adminClient.connect()
+  }
+  adminClientPromise = globalWithMongo._adminClientPromise
 } else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect()
+  // Production mode
+  healIsClient = new MongoClient(healIsUri, options)
+  healIsClientPromise = healIsClient.connect()
+  
+  adminClient = new MongoClient(adminUri, options)
+  adminClientPromise = adminClient.connect()
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise
+// Export client promises
+export { healIsClientPromise as default, adminClientPromise }
 
-// Healthcare Database Helper Functions
-export async function getDatabase(): Promise<Db> {
-  const client = await clientPromise
-  return client.db('healis_healthcare')
+// Database Helper Functions
+export async function getHealIsDatabase(): Promise<Db> {
+  const client = await healIsClientPromise
+  return client.db(process.env.DATABASE_NAME_HEALIS || 'healis')
 }
 
-export async function getPatients() {
-  const db = await getDatabase()
-  return await db.collection('patients').find({}).toArray()
+export async function getAdminDatabase(): Promise<Db> {
+  const client = await adminClientPromise
+  return client.db(process.env.DATABASE_NAME_ADMIN || 'healis-admin')
 }
 
-export async function getAppointments() {
-  const db = await getDatabase()
-  return await db.collection('appointments').find({}).toArray()
+// HEALIS Database Helper Functions
+export async function getUsers() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_USERS || 'users').find({}).toArray()
 }
 
-export async function getMedicalRecords() {
-  const db = await getDatabase()
-  return await db.collection('medical_records').find({}).toArray()
+export async function getDoctorAppointments() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_DOCTOR_APPOINTMENTS || 'doctorappointments').find({}).toArray()
 }
 
-export async function getHospitals() {
-  const db = await getDatabase()
-  return await db.collection('hospitals').find({}).toArray()
+export async function getHealthCheckups() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_HEALTH_CHECKUPS || 'healthcheckups').find({}).toArray()
+}
+
+export async function getMedications() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_MEDICATIONS || 'medications').find({}).toArray()
+}
+
+export async function getLabTests() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_LAB_TESTS || 'labtests').find({}).toArray()
+}
+
+export async function getVaccinations() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_VACCINATIONS || 'vaccinations').find({}).toArray()
+}
+
+export async function getMentalHealthRecords() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_MENTAL_HEALTH || 'mentalhealth').find({}).toArray()
+}
+
+export async function getNutritionistBookings() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_NUTRITIONIST_BOOKINGS || 'nutritionistbookings').find({}).toArray()
+}
+
+export async function getPharmacyOrders() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_PHARMACY_ORDERS || 'pharmacyorders').find({}).toArray()
+}
+
+export async function getReminders() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_REMINDERS || 'reminders').find({}).toArray()
+}
+
+export async function getContacts() {
+  const db = await getHealIsDatabase()
+  return await db.collection(process.env.COLLECTION_CONTACTS || 'contacts').find({}).toArray()
+}
+
+// Admin Database Helper Functions
+export async function getAdminPharmacy() {
+  const db = await getAdminDatabase()
+  return await db.collection(process.env.COLLECTION_ADMIN_PHARMACY || 'pharmacy').find({}).toArray()
+}
+
+export async function getAdminRegister() {
+  const db = await getAdminDatabase()
+  return await db.collection(process.env.COLLECTION_ADMIN_REGISTER || 'register').find({}).toArray()
 }
 
 // Real-time data insertion for demonstration
-export async function insertSampleData() {
-  const db = await getDatabase()
+export async function insertSampleHealIsData() {
+  const db = await getHealIsDatabase()
   
   // Sample Indian Healthcare Data
   const samplePatients = [
