@@ -1,16 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Activity, Users, Network, Database, Cpu, Play, Pause, RotateCcw } from 'lucide-react'
+import { Heart, Activity, Users, Network, Database, Cpu, Play, Pause, RotateCcw, TreePine, BarChart3, Hash, Navigation, Volume2, VolumeX, Settings, Download, Maximize2 } from 'lucide-react'
 import PriorityQueueVisualizer from './dsa/PriorityQueueVisualizer'
 import QueueFlowVisualizer from './dsa/QueueFlowVisualizer'
 import StackRecordsVisualizer from './dsa/StackRecordsVisualizer'
 import GraphNetworkVisualizer from './dsa/GraphNetworkVisualizer'
+import BinarySearchTreeVisualizer from './dsa/BinarySearchTreeVisualizer'
+import SortingVisualizer from './dsa/SortingVisualizer'
+import HashTableVisualizer from './dsa/HashTableVisualizer'
+import PathfindingVisualizer from './dsa/PathfindingVisualizer'
+import SoundSystem from './dsa/SoundSystem'
 
 export default function DSAShowcase() {
-  const [activeTab, setActiveTab] = useState('priority-queue')
+  const [activeTab, setActiveTab] = useState('binary-search-tree')
   const [isPlaying, setIsPlaying] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [speed, setSpeed] = useState(1)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   const dsaTabs = [
     {
@@ -21,6 +30,42 @@ export default function DSAShowcase() {
       color: 'from-red-500 to-pink-500',
       bgColor: 'from-red-50 to-pink-50',
       component: PriorityQueueVisualizer
+    },
+    {
+      id: 'binary-search-tree',
+      name: 'Binary Search Tree',
+      description: 'Patient Records BST with Real-time Operations',
+      icon: TreePine,
+      color: 'from-emerald-500 to-green-500',
+      bgColor: 'from-emerald-50 to-green-50',
+      component: BinarySearchTreeVisualizer
+    },
+    {
+      id: 'sorting-algorithms',
+      name: 'Sorting Algorithms',
+      description: 'Interactive Sorting Visualizations',
+      icon: BarChart3,
+      color: 'from-orange-500 to-red-500',
+      bgColor: 'from-orange-50 to-red-50',
+      component: SortingVisualizer
+    },
+    {
+      id: 'hash-table',
+      name: 'Hash Table',
+      description: 'Patient Database with Collision Handling',
+      icon: Hash,
+      color: 'from-indigo-500 to-purple-500',
+      bgColor: 'from-indigo-50 to-purple-50',
+      component: HashTableVisualizer
+    },
+    {
+      id: 'pathfinding',
+      name: 'Pathfinding',
+      description: 'Hospital Navigation with A* & Dijkstra',
+      icon: Navigation,
+      color: 'from-teal-500 to-cyan-500',
+      bgColor: 'from-teal-50 to-cyan-50',
+      component: PathfindingVisualizer
     },
     {
       id: 'queue-flow',
@@ -56,6 +101,7 @@ export default function DSAShowcase() {
 
   return (
     <div className="space-y-8">
+      <SoundSystem enabled={soundEnabled} />
       {/* Tab Navigation */}
       <div className="flex flex-wrap gap-4 justify-center">
         {dsaTabs.map((tab) => (
@@ -96,28 +142,133 @@ export default function DSAShowcase() {
         ))}
       </div>
 
-      {/* Control Panel */}
+      {/* Enhanced Control Panel */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-center space-x-4"
+        className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 shadow-xl"
       >
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-            isPlaying
-              ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-medium hover:shadow-large'
-              : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-medium hover:shadow-large'
-          }`}
-        >
-          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-          <span>{isPlaying ? 'Pause Animation' : 'Start Animation'}</span>
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Algorithm Controls</h3>
+          <div className="flex items-center space-x-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`p-2 rounded-lg transition-all duration-300 ${
+                soundEnabled
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all duration-300"
+            >
+              <Settings className="w-5 h-5" />
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all duration-300"
+            >
+              <Maximize2 className="w-5 h-5" />
+            </motion.button>
+          </div>
+        </div>
         
-        <button className="flex items-center space-x-2 px-6 py-3 rounded-xl font-medium bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-medium hover:shadow-large transition-all duration-300">
-          <RotateCcw className="w-5 h-5" />
-          <span>Reset</span>
-        </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Playback Control</label>
+            <div className="flex space-x-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsPlaying(!isPlaying)}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${
+                  isPlaying
+                    ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                <span>{isPlaying ? 'Pause' : 'Play'}</span>
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-4 py-3 rounded-xl font-medium bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <RotateCcw className="w-5 h-5" />
+              </motion.button>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Animation Speed: {speed}x</label>
+            <input
+              type="range"
+              min="0.25"
+              max="3"
+              step="0.25"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Export & Share</label>
+            <div className="flex space-x-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </motion.button>
+            </div>
+          </div>
+        </div>
+        
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 pt-4 border-t border-gray-200"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option>Healthcare Theme</option>
+                    <option>Dark Mode</option>
+                    <option>High Contrast</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Size</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option>Small (10-20 items)</option>
+                    <option>Medium (50-100 items)</option>
+                    <option>Large (200+ items)</option>
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Main Visualization Area */}
@@ -165,7 +316,7 @@ export default function DSAShowcase() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
               >
-                <ActiveComponent isPlaying={isPlaying} />
+                <ActiveComponent isPlaying={isPlaying} speed={speed} soundEnabled={soundEnabled} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -208,6 +359,10 @@ export default function DSAShowcase() {
 function getComplexity(tab: string) {
   const complexities = {
     'priority-queue': 'O(log n)',
+    'binary-search-tree': 'O(log n)',
+    'sorting-algorithms': 'O(n log n)',
+    'hash-table': 'O(1)',
+    'pathfinding': 'O(V log V)',
     'queue-flow': 'O(1)',
     'stack-records': 'O(1)',
     'graph-network': 'O(V + E)'
@@ -218,6 +373,10 @@ function getComplexity(tab: string) {
 function getTimeComplexity(tab: string) {
   const complexities = {
     'priority-queue': 'O(log n)',
+    'binary-search-tree': 'O(log n)',
+    'sorting-algorithms': 'O(n²) - O(n log n)',
+    'hash-table': 'O(1) avg',
+    'pathfinding': 'O(V log V + E)',
     'queue-flow': 'O(1)',
     'stack-records': 'O(1)',
     'graph-network': 'O(V log V)'
@@ -228,6 +387,10 @@ function getTimeComplexity(tab: string) {
 function getSpaceComplexity(tab: string) {
   const complexities = {
     'priority-queue': 'O(n)',
+    'binary-search-tree': 'O(n)',
+    'sorting-algorithms': 'O(1) - O(n)',
+    'hash-table': 'O(n)',
+    'pathfinding': 'O(V)',
     'queue-flow': 'O(n)',
     'stack-records': 'O(n)',
     'graph-network': 'O(V + E)'
@@ -238,6 +401,10 @@ function getSpaceComplexity(tab: string) {
 function getUseCase(tab: string) {
   const useCases = {
     'priority-queue': 'Emergency Triage',
+    'binary-search-tree': 'Patient Records',
+    'sorting-algorithms': 'Data Organization',
+    'hash-table': 'Fast Patient Lookup',
+    'pathfinding': 'Hospital Navigation',
     'queue-flow': 'Appointment Scheduling',
     'stack-records': 'Medical History',
     'graph-network': 'Hospital Navigation'
@@ -248,6 +415,10 @@ function getUseCase(tab: string) {
 function getAlgorithmExplanation(tab: string) {
   const explanations = {
     'priority-queue': 'The Priority Queue uses a Min-Heap data structure to ensure that patients with the highest medical priority (lowest priority number) are always processed first. Each insertion and extraction maintains the heap property, guaranteeing optimal emergency care delivery.',
+    'binary-search-tree': 'The Binary Search Tree maintains patient records in a sorted hierarchical structure. Each node contains a patient ID, with smaller IDs on the left and larger IDs on the right. This enables O(log n) search, insertion, and deletion operations for efficient patient data management.',
+    'sorting-algorithms': 'Interactive visualization of fundamental sorting algorithms including Bubble Sort, Quick Sort, Merge Sort, and Heap Sort. Watch how different algorithms organize patient data with varying time complexities and performance characteristics.',
+    'hash-table': 'The Hash Table provides O(1) average-case lookup time for patient records using a hash function. Collisions are handled through chaining, ensuring all patient data is accessible even when multiple records hash to the same index.',
+    'pathfinding': 'Advanced pathfinding algorithms including Dijkstra\'s Algorithm and A* Search for optimal hospital navigation. Visualize how different algorithms explore the search space to find the shortest path between locations, with real-time metrics and interactive maze generation.',
     'queue-flow': 'The FIFO Queue processes appointments in the order they were scheduled, ensuring fairness in non-emergency situations. Patients enter the queue when booking appointments and are served in chronological order, maintaining system integrity.',
     'stack-records': 'The Stack structure provides LIFO access to medical records, allowing healthcare providers to quickly access the most recent patient information. This is ideal for reviewing recent treatments, medications, and diagnostic results.',
     'graph-network': 'The Graph Network uses Dijkstra\'s algorithm to find the shortest path between hospitals for patient transfers. Each hospital is a node, and connections represent transfer routes with associated costs (time, distance, resources).'

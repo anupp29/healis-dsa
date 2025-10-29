@@ -31,9 +31,11 @@ interface PathStep {
 
 interface GraphNetworkVisualizerProps {
   isPlaying: boolean
+  speed?: number
+  soundEnabled?: boolean
 }
 
-export default function GraphNetworkVisualizer({ isPlaying }: GraphNetworkVisualizerProps) {
+export default function GraphNetworkVisualizer({ isPlaying, speed = 1, soundEnabled = true }: GraphNetworkVisualizerProps) {
   const [selectedStart, setSelectedStart] = useState<string>('')
   const [selectedEnd, setSelectedEnd] = useState<string>('')
   const [shortestPath, setShortestPath] = useState<PathStep[]>([])
@@ -111,7 +113,7 @@ export default function GraphNetworkVisualizer({ isPlaying }: GraphNetworkVisual
       let current = ''
       let minDistance = Infinity
       
-      for (const nodeId of unvisited) {
+      for (const nodeId of Array.from(unvisited)) {
         if (distances[nodeId] < minDistance) {
           minDistance = distances[nodeId]
           current = nodeId

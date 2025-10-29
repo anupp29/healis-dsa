@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Heart, Activity, Users, Calendar, Brain, Stethoscope } from 'lucide-react'
+import { Heart, Activity, Users, Calendar, Brain, Stethoscope, Pill, FlaskConical, BarChart3, Navigation as NavigationIcon } from 'lucide-react'
+import Link from 'next/link'
 import Navigation from '../components/Navigation'
 import HeroSection from '../components/HeroSection'
 import DSAShowcase from '../components/DSAShowcase'
@@ -81,23 +82,27 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {features.map((feature, index) => (
-                <motion.div
+                <Link
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 * index }}
+                  href={getFeatureHref(feature.title)}
                   className="medical-card p-6 text-center group hover:scale-105"
                 >
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <feature.icon className="w-8 h-8 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-display font-semibold text-text-primary mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-text-secondary">
-                    {feature.description}
-                  </p>
-                </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.1 * index }}
+                  >
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <feature.icon className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-display font-semibold text-text-primary mb-2">
+                      {feature.title}
+                    </h3>
+                    <p className="text-text-secondary">
+                      {feature.description}
+                    </p>
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </div>
@@ -107,35 +112,46 @@ export default function HomePage() {
   )
 }
 
+const getFeatureHref = (title: string): string => {
+  switch (title) {
+    case "Patient Triage System": return "/dashboard?view=patient"
+    case "Medicine Management": return "/dashboard?view=medicine"
+    case "Lab Workflow Engine": return "/dashboard?view=lab"
+    case "Administrator Analytics": return "/dashboard?view=admin"
+    case "Hospital Navigation": return "/dashboard?view=navigation"
+    default: return "/dashboard"
+  }
+}
+
 const features = [
   {
     icon: Heart,
-    title: "Priority Queue Triage",
-    description: "Emergency room patient prioritization using min-heap algorithms for optimal care delivery"
+    title: "Patient Triage System",
+    description: "Medical-grade priority queue with 5-level triage, vital signs integration, and real-time priority adjustment"
+  },
+  {
+    icon: Pill,
+    title: "Medicine Management",
+    description: "Advanced inventory tracking with hash tables, fuzzy search, and predictive reorder recommendations"
+  },
+  {
+    icon: FlaskConical,
+    title: "Lab Workflow Engine",
+    description: "Multi-dimensional priority queues for test processing with intelligent workload balancing"
+  },
+  {
+    icon: BarChart3,
+    title: "Administrator Analytics",
+    description: "Comprehensive hospital analytics with real-time KPIs, revenue tracking, and bottleneck detection"
+  },
+  {
+    icon: NavigationIcon,
+    title: "Hospital Navigation",
+    description: "Graph-based pathfinding with Dijkstra's algorithm, accessibility support, and emergency evacuation"
   },
   {
     icon: Activity,
-    title: "Real-time Queue Management",
-    description: "FIFO queue visualization for appointment scheduling and patient flow optimization"
-  },
-  {
-    icon: Users,
-    title: "Stack-based Records",
-    description: "LIFO stack operations for accessing recent medical records and treatment history"
-  },
-  {
-    icon: Calendar,
-    title: "Graph Network Analysis",
-    description: "Hospital network optimization using graph algorithms for patient transfers"
-  },
-  {
-    icon: Brain,
-    title: "Intelligent Analytics",
-    description: "Advanced data processing with hash tables and binary search trees for fast lookups"
-  },
-  {
-    icon: Stethoscope,
-    title: "Medical Insights",
-    description: "Professional healthcare visualizations with Indian hospital data integration"
+    title: "Real-time Monitoring",
+    description: "Live data visualization with beautiful UI, interactive charts, and instant system updates"
   }
 ]

@@ -18,9 +18,11 @@ interface MedicalRecord {
 
 interface StackRecordsVisualizerProps {
   isPlaying: boolean
+  speed?: number
+  soundEnabled?: boolean
 }
 
-export default function StackRecordsVisualizer({ isPlaying }: StackRecordsVisualizerProps) {
+export default function StackRecordsVisualizer({ isPlaying, speed = 1, soundEnabled = true }: StackRecordsVisualizerProps) {
   const [stack, setStack] = useState<MedicalRecord[]>([])
   const [currentRecord, setCurrentRecord] = useState<MedicalRecord | null>(null)
   const [accessedRecords, setAccessedRecords] = useState<MedicalRecord[]>([])

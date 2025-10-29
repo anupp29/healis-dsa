@@ -18,9 +18,11 @@ interface Appointment {
 
 interface QueueFlowVisualizerProps {
   isPlaying: boolean
+  speed?: number
+  soundEnabled?: boolean
 }
 
-export default function QueueFlowVisualizer({ isPlaying }: QueueFlowVisualizerProps) {
+export default function QueueFlowVisualizer({ isPlaying, speed = 1, soundEnabled = true }: QueueFlowVisualizerProps) {
   const [queue, setQueue] = useState<Appointment[]>([])
   const [currentPatient, setCurrentPatient] = useState<Appointment | null>(null)
   const [completedPatients, setCompletedPatients] = useState<Appointment[]>([])

@@ -17,9 +17,11 @@ interface Patient {
 
 interface PriorityQueueVisualizerProps {
   isPlaying: boolean
+  speed?: number
+  soundEnabled?: boolean
 }
 
-export default function PriorityQueueVisualizer({ isPlaying }: PriorityQueueVisualizerProps) {
+export default function PriorityQueueVisualizer({ isPlaying, speed = 1, soundEnabled = true }: PriorityQueueVisualizerProps) {
   const [heap, setHeap] = useState<Patient[]>([])
   const [currentOperation, setCurrentOperation] = useState<string>('')
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1)

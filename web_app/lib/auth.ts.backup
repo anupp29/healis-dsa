@@ -1,0 +1,423 @@
+import { NextAuthOptions } from 'next-auth'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import { compare, hash } from 'bcryptjs'
+import { sign, verify } from 'jsonwebtoken'
+import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto'
+import { dbManager } from './database'
+
+// HIPAA Compliance Configuration
+const HIPAA_CONFIG = {
+  SESSION_TIMEOUT: 15 * 60 * 1000, // 15 minutes
+  PASSWORD_MIN_LENGTH: 12,
+  PASSWORD_COMPLEXITY: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+  MAX_LOGIN_ATTEMPTS: 3,
+  LOCKOUT_DURATION: 30 * 60 * 1000, // 30 minutes
+  AUDIT_LOG_RETENTION: 6 * 365 * 24 * 60 * 60 * 1000, // 6 years
+  ENCRYPTION_ALGORITHM: 'aes-256-gcm'
+}
+
+interface User {
+  id: string
+  email: string
+  role: 'admin' | 'doctor' | 'nurse' | 'technician' | 'pharmacist'
+  permissions: string[]
+  department: string
+  licenseNumber?: string
+  lastLogin?: Date
+  loginAttempts: number
+  lockedUntil?: Date
+  mfaEnabled: boolean
+  mfaSecret?: string
+}
+
+interface AuditLog {
+  userId: string
+  action: string
+  resource: string
+  timestamp: Date
+  ipAddress: string
+  userAgent: string
+  success: boolean
+  details?: any
+}
+
+class SecurityManager {
+  private static instance: SecurityManager
+  private encryptionKey: Buffer
+  private jwtSecret: string
+
+  private constructor() {
+    this.encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY || this.generateKey(), 'hex')
+    this.jwtSecret = process.env.JWT_SECRET || this.generateKey()
+  }
+
+  public static getInstance(): SecurityManager {
+    if (!SecurityManager.instance) {
+      SecurityManager.instance = new SecurityManager()
+    }
+    return SecurityManager.instance
+  }
+
+  private generateKey(): string {
+    return randomBytes(32).toString('hex')
+  }
+
+  // HIPAA-compliant password hashing
+  public async hashPassword(password: string): Promise<string> {
+    if (!this.validatePasswordComplexity(password)) {
+      throw new Error('Password does not meet HIPAA complexity requirements')
+    }
+    return await hash(password, 12) // High cost factor for security
+  }
+
+  public async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+    return await compare(password, hashedPassword)
+  }
+
+  public validatePasswordComplexity(password: string): boolean {
+    return password.length >= HIPAA_CONFIG.PASSWORD_MIN_LENGTH &&
+           HIPAA_CONFIG.PASSWORD_COMPLEXITY.test(password)
+  }
+
+  // PHI Encryption/Decryption
+  public encryptPHI(data: string): { encrypted: string; iv: string; tag: string } {
+    const iv = randomBytes(16)
+    const cipher = createCipheriv(HIPAA_CONFIG.ENCRYPTION_ALGORITHM, this.encryptionKey, iv)
+    
+    let encrypted = cipher.update(data, 'utf8', 'hex')
+    encrypted += cipher.final('hex')
+    
+    const tag = cipher.getAuthTag()
+    
+    return {
+      encrypted,
+      iv: iv.toString('hex'),
+      tag: tag.toString('hex')
+    }
+  }
+
+  public decryptPHI(encryptedData: { encrypted: string; iv: string; tag: string }): string {
+    const decipher = createDecipheriv(
+      HIPAA_CONFIG.ENCRYPTION_ALGORITHM,
+      this.encryptionKey,
+      Buffer.from(encryptedData.iv, 'hex')
+    )
+    
+    decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'))
+    
+    let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    
+    return decrypted
+  }
+
+  // JWT Token Management
+  public generateAccessToken(user: User): string {
+    return sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        department: user.department
+      },
+      this.jwtSecret,
+      { expiresIn: '15m' } // Short-lived for security
+    )
+  }
+
+  public generateRefreshToken(userId: string): string {
+    return sign(
+      { userId, type: 'refresh' },
+      this.jwtSecret,
+      { expiresIn: '7d' }
+    )
+  }
+
+  public verifyToken(token: string): any {
+    try {
+      return verify(token, this.jwtSecret)
+    } catch (error) {
+      throw new Error('Invalid or expired token')
+    }
+  }
+
+  // Audit Logging
+  public async logAuditEvent(auditLog: AuditLog): Promise<void> {
+    try {
+      const db = await dbManager.connect()
+      const collection = db.db.collection('audit_logs')
+      
+      await collection.insertOne({
+        ...auditLog,
+        timestamp: new Date(),
+        hash: this.generateAuditHash(auditLog)
+      })
+    } catch (error) {
+      console.error('Failed to log audit event:', error)
+      // Critical: Audit logging failure should be escalated
+    }
+  }
+
+  private generateAuditHash(auditLog: AuditLog): string {
+    const data = JSON.stringify(auditLog)
+    return createHash('sha256').update(data).digest('hex')
+  }
+}
+
+class AuthenticationService {
+  private securityManager: SecurityManager
+  private db: any
+
+  constructor() {
+    this.securityManager = SecurityManager.getInstance()
+  }
+
+  public async authenticateUser(email: string, password: string, ipAddress: string, userAgent: string): Promise<{
+    success: boolean
+    user?: User
+    accessToken?: string
+    refreshToken?: string
+    message?: string
+  }> {
+    try {
+      const db = await dbManager.connect()
+      const usersCollection = db.db.collection('users')
+      
+      // Find user
+      const user = await usersCollection.findOne({ email })
+      if (!user) {
+        await this.logFailedLogin(email, 'User not found', ipAddress, userAgent)
+        return { success: false, message: 'Invalid credentials' }
+      }
+
+      // Check if account is locked
+      if (user.lockedUntil && user.lockedUntil > new Date()) {
+        await this.logFailedLogin(email, 'Account locked', ipAddress, userAgent)
+        return { success: false, message: 'Account temporarily locked' }
+      }
+
+      // Verify password
+      const isValidPassword = await this.securityManager.verifyPassword(password, user.password)
+      if (!isValidPassword) {
+        await this.handleFailedLogin(user, ipAddress, userAgent)
+        return { success: false, message: 'Invalid credentials' }
+      }
+
+      // Reset login attempts on successful login
+      await usersCollection.updateOne(
+        { _id: user._id },
+        { 
+          $unset: { loginAttempts: 1, lockedUntil: 1 },
+          $set: { lastLogin: new Date() }
+        }
+      )
+
+      // Generate tokens
+      const accessToken = this.securityManager.generateAccessToken(user)
+      const refreshToken = this.securityManager.generateRefreshToken(user.id)
+
+      // Log successful login
+      await this.securityManager.logAuditEvent({
+        userId: user.id,
+        action: 'LOGIN',
+        resource: 'AUTH',
+        timestamp: new Date(),
+        ipAddress,
+        userAgent,
+        success: true
+      })
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          permissions: user.permissions,
+          department: user.department,
+          licenseNumber: user.licenseNumber,
+          lastLogin: user.lastLogin,
+          loginAttempts: 0,
+          mfaEnabled: user.mfaEnabled
+        },
+        accessToken,
+        refreshToken
+      }
+
+    } catch (error) {
+      console.error('Authentication error:', error)
+      return { success: false, message: 'Authentication service error' }
+    }
+  }
+
+  private async handleFailedLogin(user: any, ipAddress: string, userAgent: string): Promise<void> {
+    const db = await dbManager.connect()
+    const usersCollection = db.db.collection('users')
+    
+    const loginAttempts = (user.loginAttempts || 0) + 1
+    const updateData: any = { loginAttempts }
+    
+    if (loginAttempts >= HIPAA_CONFIG.MAX_LOGIN_ATTEMPTS) {
+      updateData.lockedUntil = new Date(Date.now() + HIPAA_CONFIG.LOCKOUT_DURATION)
+    }
+    
+    await usersCollection.updateOne({ _id: user._id }, { $set: updateData })
+    
+    await this.logFailedLogin(user.email, 'Invalid password', ipAddress, userAgent)
+  }
+
+  private async logFailedLogin(email: string, reason: string, ipAddress: string, userAgent: string): Promise<void> {
+    await this.securityManager.logAuditEvent({
+      userId: email,
+      action: 'LOGIN_FAILED',
+      resource: 'AUTH',
+      timestamp: new Date(),
+      ipAddress,
+      userAgent,
+      success: false,
+      details: { reason }
+    })
+  }
+
+  public async createUser(userData: {
+    email: string
+    password: string
+    role: string
+    department: string
+    licenseNumber?: string
+  }): Promise<{ success: boolean; user?: any; message?: string }> {
+    try {
+      const db = await dbManager.connect()
+      const usersCollection = db.db.collection('users')
+      
+      // Check if user already exists
+      const existingUser = await usersCollection.findOne({ email: userData.email })
+      if (existingUser) {
+        return { success: false, message: 'User already exists' }
+      }
+
+      // Hash password
+      const hashedPassword = await this.securityManager.hashPassword(userData.password)
+      
+      // Create user
+      const newUser = {
+        id: randomBytes(16).toString('hex'),
+        email: userData.email,
+        password: hashedPassword,
+        role: userData.role,
+        department: userData.department,
+        licenseNumber: userData.licenseNumber,
+        permissions: this.getDefaultPermissions(userData.role),
+        loginAttempts: 0,
+        mfaEnabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      await usersCollection.insertOne(newUser)
+      
+      // Remove password from response
+      const { password, ...userResponse } = newUser
+      
+      return { success: true, user: userResponse }
+      
+    } catch (error) {
+      console.error('User creation error:', error)
+      return { success: false, message: 'Failed to create user' }
+    }
+  }
+
+  private getDefaultPermissions(role: string): string[] {
+    const permissions: Record<string, string[]> = {
+      admin: ['*'], // All permissions
+      doctor: ['patient:read', 'patient:write', 'appointment:read', 'appointment:write', 'prescription:write'],
+      nurse: ['patient:read', 'patient:write', 'vitals:write', 'medication:read'],
+      technician: ['labtest:read', 'labtest:write', 'equipment:read'],
+      pharmacist: ['medicine:read', 'medicine:write', 'prescription:read', 'inventory:write']
+    }
+    
+    return permissions[role] || ['basic:read']
+  }
+}
+
+// Role-based Access Control
+export class RBACMiddleware {
+  public static checkPermission(requiredPermission: string) {
+    return (user: User): boolean => {
+      if (user.permissions.includes('*')) return true
+      return user.permissions.includes(requiredPermission)
+    }
+  }
+
+  public static checkRole(requiredRoles: string[]) {
+    return (user: User): boolean => {
+      return requiredRoles.includes(user.role)
+    }
+  }
+}
+
+// NextAuth Configuration
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
+      },
+      async authorize(credentials, req) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        const authService = new AuthenticationService()
+        const result = await authService.authenticateUser(
+          credentials.email,
+          credentials.password,
+          req.headers?.['x-forwarded-for'] as string || 'unknown',
+          req.headers?.['user-agent'] || 'unknown'
+        )
+
+        if (result.success && result.user) {
+          return {
+            id: result.user.id,
+            email: result.user.email,
+            role: result.user.role,
+            department: result.user.department,
+            accessToken: result.accessToken
+          }
+        }
+
+        return null
+      }
+    })
+  ],
+  session: {
+    strategy: 'jwt',
+    maxAge: HIPAA_CONFIG.SESSION_TIMEOUT / 1000
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role = user.role
+        token.department = user.department
+        token.accessToken = user.accessToken
+      }
+      return token
+    },
+    async session({ session, token }) {
+      session.user.role = token.role
+      session.user.department = token.department
+      session.accessToken = token.accessToken
+      return session
+    }
+  },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error'
+  }
+}
+
+export const securityManager = SecurityManager.getInstance()
+export const authService = new AuthenticationService()

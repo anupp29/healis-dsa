@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Route, Clock, Infinity, CheckCircle, ArrowRight } from 'lucide-react'
+import { MapPin, Route, Clock, Infinity as InfinityIcon, CheckCircle, ArrowRight } from 'lucide-react'
 
 interface Node {
   id: string

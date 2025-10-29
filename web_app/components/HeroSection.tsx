@@ -25,24 +25,40 @@ export default function HeroSection() {
             >
               <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 rounded-full border border-blue-100 mb-6">
                 <Sparkles className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-blue-700">Professional DSA Visualization</span>
+                <span className="text-sm font-medium text-blue-700">Healis Medical AI • DSA Showcase</span>
               </div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-sans font-bold text-gray-800 mb-6 leading-tight">
-                Where{' '}
-                <span className="text-gradient">Basic DSA</span>
+                <span className="text-gradient">HEAL Platform</span>
                 <br />
-                Meets{' '}
-                <span className="text-gradient">Healthcare</span>
+                DSA Implementation
                 <br />
-                Excellence
+                <span className="text-gradient">Showcase</span>
               </h1>
               
               <p className="text-lg text-gray-600 max-w-2xl mx-auto lg:mx-0 mb-8">
-                Experience the beauty of fundamental data structures and algorithms through 
-                professional healthcare visualizations. Watch heaps, queues, stacks, and graphs 
-                solve real medical challenges with stunning clarity.
+                Discover how <strong>Data Structures and Algorithms</strong> power the backend of 
+                <strong> Healis Medical AI</strong> - our comprehensive healthcare suite. 
+                This platform demonstrates real DSA implementations solving actual medical challenges 
+                with production-ready code and beautiful visualizations.
               </p>
+
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 mb-6 border border-indigo-100">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Heart className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">About This Platform</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      <strong>HEAL</strong> is a technical demonstration showcasing how fundamental DSA concepts 
+                      (Priority Queues, Hash Tables, Graphs, Binary Trees) are implemented in the backend 
+                      infrastructure of <strong>Healis</strong> - our advanced medical AI platform. 
+                      Every algorithm here solves real healthcare problems.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
 
             <motion.div
@@ -70,16 +86,16 @@ export default function HeroSection() {
               className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-border-light"
             >
               <div className="text-center">
-                <div className="text-2xl font-bold text-text-primary">5+</div>
-                <div className="text-sm text-text-secondary">DSA Concepts</div>
+                <div className="text-2xl font-bold text-text-primary">15+</div>
+                <div className="text-sm text-text-secondary">DSA Algorithms</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-text-primary">1000+</div>
-                <div className="text-sm text-text-secondary">Patient Records</div>
+                <div className="text-2xl font-bold text-text-primary">5</div>
+                <div className="text-sm text-text-secondary">Core Systems</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-text-primary">Real-time</div>
-                <div className="text-sm text-text-secondary">Visualization</div>
+                <div className="text-2xl font-bold text-text-primary">Production</div>
+                <div className="text-sm text-text-secondary">Ready Code</div>
               </div>
             </motion.div>
           </div>
